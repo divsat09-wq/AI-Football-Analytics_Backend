@@ -1,10 +1,19 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 import os
 
 from yolo_analyzer import analyze_video
 
 app = FastAPI(title="AI Football Analytics API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
@@ -18,7 +27,7 @@ def health():
 
 
 @app.post("/analyze")
-async def analyze(video: UploadFile = File(...)):
+async def analyze(request: Request, video: UploadFile = File(...)):
     os.makedirs("uploads", exist_ok=True)
     os.makedirs("results", exist_ok=True)
 
@@ -36,7 +45,8 @@ async def analyze(video: UploadFile = File(...)):
     return {
         "message": "Video analyzed successfully!",
         "filename": video.filename,
-        "result": output_path
+        "result": output_path,
+        "result_url": str(request.url_for("get_result", filename=os.path.basename(output_path)))
     }
 
 
